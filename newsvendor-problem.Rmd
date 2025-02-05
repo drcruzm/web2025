@@ -1,0 +1,111 @@
+---
+title: "NewsVendor"
+author: "Solución Exacta"
+---
+
+Ejemplo completo en R que simula el problema del “newsvendor” (vendedor de periódicos) para ayudar a decidir la cantidad de pedido (Q) que maximiza el beneficio esperado. 
+
+La idea es evaluar, para cada posible cantidad Q, el beneficio obtenido al vender hasta el nivel de la demanda real, considerando además el valor de salvamento para el excedente y el costo de producir (o comprar) cada unidad.
+
+------
+
+## Explicación del Problema
+
+El problema del newsvendor se formula de la siguiente manera:
+
+- **Parámetros clave:**
+  - pp: Precio de venta por unidad.
+  - cc: Costo por unidad.
+  - vv: Valor de salvamento (si las unidades no se venden).
+  - DD: Demanda aleatoria, con función de distribución FF (por ejemplo, Poisson, normal, etc.).
+- **Beneficio obtenido:**
+  - Las unidades vendidas son min⁡(Q,D)\min(Q, D).
+  - Ingresos: p×min⁡(Q,D)p \times \min(Q, D).
+  - Si se pide QQ y la demanda es menor, se obtiene además el ingreso por salvamento de las unidades no vendidas: v×(Q−min⁡(Q,D))v \times (Q - \min(Q, D)).
+  - El costo total es c×Qc \times Q.
+  - Por lo tanto, el beneficio (profit) en una realización es: Profit=p×min⁡(Q,D)+v×(Q−min⁡(Q,D))−c×Q\text{Profit} = p \times \min(Q, D) + v \times (Q - \min(Q, D)) - c \times Q
+- **Objetivo:**
+  - Encontrar el QQ que maximiza el beneficio esperado E[Profit]E[\text{Profit}].
+
+Una forma de resolver este problema es mediante simulación: para cada valor candidato de QQ se simulan múltiples escenarios de demanda, se calcula el beneficio en cada escenario y se promedia. El QQ que produce el mayor beneficio promedio es la cantidad óptima a pedir.
+
+------
+
+## Código en R
+
+```{r 1}
+# Establecer semilla para reproducibilidad
+set.seed(123)
+
+# Parámetros del modelo
+p <- 20          # Precio de venta por unidad
+c <- 12          # Costo por unidad
+v <- 5           # Valor de salvamento para unidades no vendidas
+lambda <- 100    # Demanda promedio (para distribución Poisson)
+
+n.sim <- 10000   # Número de simulaciones por cada cantidad de pedido
+```
+
+
+```{r 2}
+# Vector de cantidades de pedido candidatos (puede ajustarse según la situación)
+order_quantities <- seq(80, 120, by = 1)
+
+# Vector para almacenar el beneficio esperado de cada Q
+profits <- numeric(length(order_quantities))
+```
+
+
+```{r 3}
+# Simulación: para cada Q se simula la demanda y se calcula el beneficio
+for (i in seq_along(order_quantities)) {
+  Q <- order_quantities[i]
+  # Simular la demanda usando distribución de Poisson
+  demand <- rpois(n.sim, lambda)
+  # Unidades vendidas: mínimo entre Q y la demanda simulada
+  sold <- pmin(Q, demand)
+  # Calcular beneficio para cada simulación:
+  # Ingresos por ventas + ingresos por salvamento - costo total
+  profit_sim <- p * sold + v * (Q - sold) - c * Q
+  # Beneficio esperado (promedio)
+  profits[i] <- mean(profit_sim)
+}
+```
+
+
+```{r 4}
+# Encontrar la cantidad óptima que maximiza el beneficio esperado
+optimal_index <- which.max(profits)
+optimal_Q <- order_quantities[optimal_index]
+
+cat("La cantidad óptima de pedido es:", optimal_Q, "\n")
+cat("El beneficio esperado máximo es:", profits[optimal_index], "\n")
+```
+
+
+```{r exacta}
+# Graficar la relación entre la cantidad de pedido y el beneficio esperado
+plot(order_quantities, profits, type = "l", col = "blue", lwd = 2,
+     xlab = "Cantidad de Pedido (Q)", ylab = "Beneficio Esperado",
+     main = "Simulación del Problema del Newsvendor")
+abline(v = optimal_Q, col = "red", lty = 2)
+```
+
+------
+
+## Cómo Aplicar Esta Simulación a la Toma de Decisiones
+
+1. **Definición de Parámetros:**
+    El primer paso es definir con precisión los parámetros: el costo, el precio de venta, el valor de salvamento y la distribución de la demanda (por ejemplo, se usa una distribución Poisson con media λ\lambda en el ejemplo). Estos parámetros se obtienen a partir de datos históricos o estimaciones.
+2. **Evaluación de Alternativas:**
+    Se simulan múltiples escenarios de demanda para cada cantidad de pedido QQ en un rango razonable. Con esto se obtiene una estimación del beneficio esperado para cada QQ.
+3. **Decisión Basada en Beneficio Esperado:**
+    El valor de QQ que maximiza el beneficio esperado es la cantidad recomendada para pedir. Este enfoque permite visualizar la sensibilidad del beneficio respecto a diferentes niveles de inventario.
+4. **Análisis de Sensibilidad:**
+    Además, el decisor puede variar los parámetros (por ejemplo, cambiar λ\lambda, pp, cc o vv) y volver a ejecutar la simulación para ver cómo afecta la cantidad óptima de pedido. Esto es útil en contextos donde los precios o la demanda pueden cambiar.
+5. **Implementación Práctica:**
+    El código permite adaptar la simulación a distintos escenarios de incertidumbre. Un gerente puede utilizar esta herramienta para apoyar decisiones de inventario en situaciones de demanda incierta, comparando el rendimiento esperado de diferentes políticas de pedido.
+
+------
+
+ Puedes ajustar el rango de QQ, el número de simulaciones y la distribución de la demanda según los requerimientos específicos de tu negocio o estudio.
